@@ -1,60 +1,1297 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>HYDRA</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 2em;
-            background: #f4f4f4;
-            color: #222;
-        }
-        .container {
-            max-width: 720px;
-            margin: 0 auto;
-            background: #fff;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            padding: 2em;
-            border-radius: 10px;
-        }
-        h1 {
-            text-align: center;
-        }
-        video {
-            display: block;
-            margin: 2em auto;
-            max-width: 100%;
-            border-radius: 8px;
-            background: #000;
-        }
-        .caption {
-            text-align: center;
-            color: #666;
-            font-size: 1.1em;
-            margin-top: -1em;
-        }
-        .footer {
-            margin-top: 3em;
-            text-align: right;
-            padding-right: 1.5em;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HYDRA — Field Experiments</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:      #060E17;
+    --panel:   #0D1B2A;
+    --glow:    #39FF14;
+    --amber:   #E8A020;
+    --slate:   #4A6B8A;
+    --dim:     #1A2E45;
+    --text:    #C8D8E8;
+    --mono:    'Space Mono', monospace;
+    --serif:   'IM Fell English', serif;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  /* CRT scanlines overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,.18) 2px,
+      rgba(0,0,0,.18) 4px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  header {
+    padding: 4rem 2rem 2rem;
+    max-width: 860px;
+    margin: 0 auto;
+    border-bottom: 1px solid var(--dim);
+  }
+
+  header h1 {
+    font-family: var(--serif);
+    font-size: clamp(2rem, 5vw, 3.4rem);
+    color: #fff;
+    letter-spacing: .02em;
+    line-height: 1.1;
+    margin-bottom: .6rem;
+  }
+
+  header p {
+    color: var(--slate);
+    font-size: 12px;
+    max-width: 560px;
+    line-height: 1.8;
+  }
+
+  header .tag {
+    display: inline-block;
+    background: var(--dim);
+    color: var(--glow);
+    font-size: 10px;
+    letter-spacing: .12em;
+    padding: 3px 8px;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+  }
+
+  nav {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 1.2rem 2rem;
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--dim);
+  }
+
+  nav a {
+    color: var(--slate);
+    text-decoration: none;
+    font-size: 11px;
+    letter-spacing: .08em;
+    transition: color .2s;
+  }
+
+  nav a:hover { color: var(--glow); }
+
+  /* Experiment panels */
+  .exp {
+    max-width: 860px;
+    margin: 3rem auto;
+    padding: 0 2rem;
+  }
+
+  .exp-header {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: .8rem;
+  }
+
+  .exp-num {
+    color: var(--glow);
+    font-size: 10px;
+    letter-spacing: .18em;
+    opacity: .7;
+    flex-shrink: 0;
+  }
+
+  .exp h2 {
+    font-family: var(--serif);
+    font-size: 1.35rem;
+    color: #fff;
+    font-weight: normal;
+    letter-spacing: .01em;
+  }
+
+  .exp-desc {
+    color: var(--slate);
+    font-size: 11px;
+    line-height: 1.9;
+    margin-bottom: 1.2rem;
+    max-width: 640px;
+  }
+
+  .exp-desc em {
+    color: var(--amber);
+    font-style: normal;
+  }
+
+  .canvas-wrap {
+    position: relative;
+    border: 1px solid var(--dim);
+    background: var(--panel);
+    overflow: hidden;
+  }
+
+  canvas {
+    display: block;
+    cursor: crosshair;
+  }
+
+  .controls {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    padding: .8rem 1rem;
+    border-top: 1px solid var(--dim);
+    flex-wrap: wrap;
+  }
+
+  button {
+    background: transparent;
+    border: 1px solid var(--slate);
+    color: var(--slate);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 5px 14px;
+    cursor: pointer;
+    letter-spacing: .08em;
+    transition: all .15s;
+  }
+
+  button:hover {
+    border-color: var(--glow);
+    color: var(--glow);
+    box-shadow: 0 0 8px rgba(57,255,20,.25);
+  }
+
+  button.active {
+    border-color: var(--glow);
+    color: var(--glow);
+    background: rgba(57,255,20,.06);
+  }
+
+  .ctrl-label {
+    color: var(--slate);
+    font-size: 10px;
+    letter-spacing: .1em;
+  }
+
+  .status {
+    margin-left: auto;
+    color: var(--glow);
+    font-size: 10px;
+    letter-spacing: .08em;
+    opacity: .8;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    height: 2px;
+    background: var(--dim);
+    outline: none;
+    width: 100px;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--amber);
+    cursor: pointer;
+  }
+
+  .divider {
+    max-width: 860px;
+    margin: 2rem auto;
+    padding: 0 2rem;
+    border-bottom: 1px solid var(--dim);
+  }
+
+  footer {
+    max-width: 860px;
+    margin: 4rem auto;
+    padding: 2rem;
+    border-top: 1px solid var(--dim);
+    color: var(--slate);
+    font-size: 10px;
+    letter-spacing: .06em;
+    line-height: 2;
+  }
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1>HYDRA</h1>
-        <video controls>
-            <source src="RSVP-TARTAN__Cosmic_Roasts_to_Causal_AI.mp4">
-            Your browser does not support the video tag.
-        </video>
-        <div class="caption">
-            <i>Hybrid Dynamic Reasoning Architecture</i>
-        </div>
-    </div>
 
-    <div class="footer">
-        This site is open source. <a href="https://github.com/standardgalactic/HYDRA/edit/main/index.html">Improve this page</a>.
+<header>
+  <div class="tag">HYDRA — Field Experiments</div>
+  <h1>The Geometry of<br>Admissible Computation</h1>
+  <p>Five interactive demonstrations of the RSVP–HYDRA theoretical framework.
+  Each experiment makes a claim from the monograph tangible and explorable.
+  Click, drag, and adjust parameters to see the mathematics in motion.</p>
+</header>
+
+<nav>
+  <a href="#exp1">I. Projection Collapse</a>
+  <a href="#exp2">II. Admissibility Field</a>
+  <a href="#exp3">III. Semantic Stratification</a>
+  <a href="#exp4">IV. Resonance Memory</a>
+  <a href="#exp5">V. Collective Admissibility</a>
+</nav>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- EXPERIMENT 1: PROJECTION COLLAPSE -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<section class="exp" id="exp1">
+  <div class="exp-header">
+    <span class="exp-num">EXP / 01</span>
+    <h2>Projection Collapse</h2>
+  </div>
+  <p class="exp-desc">
+    The left panel is trajectory space 𝒳. Points represent distinct life
+    histories; their vertical position encodes hidden attributes (family endowment,
+    circumstance, luck). The right panel is the achievement manifold 𝓜 — the
+    projection π: 𝒳 → 𝓜 that discards all but one axis.<br><br>
+    <em>Drag points in 𝒳.</em> Toggle <em>Show Fibers</em> to reveal which
+    distinct trajectories collapse to the same achievement point. Toggle
+    <em>Collapse</em> to simulate meritocratic hubris: the fiber vanishes and
+    only the projected position remains.
+  </p>
+  <div class="canvas-wrap">
+    <canvas id="c1" width="820" height="340"></canvas>
+    <div class="controls">
+      <button onclick="c1AddPoint()">Add Point</button>
+      <button id="b1fiber" onclick="c1ToggleFibers()">Show Fibers</button>
+      <button id="b1collapse" onclick="c1ToggleCollapse()">Collapse Fibers</button>
+      <button onclick="c1Reset()">Reset</button>
+      <span class="status" id="s1">drag points to move them</span>
     </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- EXPERIMENT 2: ADMISSIBILITY FIELD -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<section class="exp" id="exp2">
+  <div class="exp-header">
+    <span class="exp-num">EXP / 02</span>
+    <h2>Admissibility Field Φ</h2>
+  </div>
+  <p class="exp-desc">
+    The RSVP scalar field Φ(x) measures the degree to which each state admits
+    coherent semantic continuations. Local maxima of Φ are admissibility basins —
+    stable attractors of the semantic flow field v = α∇Φ.<br><br>
+    <em>Click to release a particle.</em> It follows the gradient flow toward
+    the nearest admissibility maximum. <em>Add Basin</em> to place a new
+    attractor. <em>Entropy</em> controls the noise term ξ, the magnitude of
+    which tests Lyapunov stability.
+  </p>
+  <div class="canvas-wrap">
+    <canvas id="c2" width="820" height="380"></canvas>
+    <div class="controls">
+      <button onclick="c2AddBasin()">Add Basin</button>
+      <button onclick="c2ClearParticles()">Clear Particles</button>
+      <button onclick="c2Reset()">Reset</button>
+      <span class="ctrl-label">entropy ξ</span>
+      <input type="range" id="r2entropy" min="0" max="60" value="8">
+      <span class="status" id="s2">click canvas to release particle</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- EXPERIMENT 3: SEMANTIC STRATIFICATION -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<section class="exp" id="exp3">
+  <div class="exp-header">
+    <span class="exp-num">EXP / 03</span>
+    <h2>Semantic Stratification</h2>
+  </div>
+  <p class="exp-desc">
+    The semantic manifold is Whitney-stratified into regions of differing
+    representational dimension. Strata are shown as colored bands; boundaries
+    enforce Whitney condition B — the tangent constraint governing admissible
+    phase transitions.<br><br>
+    <em>Draw a trajectory</em> by clicking and dragging. An admissible trajectory
+    (green) follows the tangent constraint at stratum crossings. A non-admissible
+    trajectory (red) cuts through transversally. Toggle <em>Force Admissible</em>
+    to see how the trajectory is deflected to satisfy the constraint.
+  </p>
+  <div class="canvas-wrap">
+    <canvas id="c3" width="820" height="360"></canvas>
+    <div class="controls">
+      <button id="b3adm" onclick="c3ToggleAdmissible()">Force Admissible</button>
+      <button onclick="c3Reset()">Clear</button>
+      <button onclick="c3Randomize()">Randomize Strata</button>
+      <span class="status" id="s3">click and drag to draw trajectory</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- EXPERIMENT 4: RESONANCE MEMORY -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<section class="exp" id="exp4">
+  <div class="exp-header">
+    <span class="exp-num">EXP / 04</span>
+    <h2>Resonance Memory Retrieval</h2>
+  </div>
+  <p class="exp-desc">
+    MEM|8 stores memories as wave packets — stabilized field configurations
+    parameterized by amplitude A (brightness), frequency ω (semantic content),
+    and phase φ (flow direction). Retrieval fires a probe wave whose overlap
+    with each memory determines the retrieval weight w_m.<br><br>
+    <em>Click to place a memory.</em> <em>Fire Probe</em> emits a retrieval
+    cue from the cursor position; memory packets whose frequency matches
+    the cue resonate (flare bright). Adjust <em>cue freq</em> to see
+    selective activation.
+  </p>
+  <div class="canvas-wrap">
+    <canvas id="c4" width="820" height="360"></canvas>
+    <div class="controls">
+      <button onclick="c4FireProbe()">Fire Probe</button>
+      <button onclick="c4ClearMemories()">Clear Memories</button>
+      <button onclick="c4Reset()">Reset</button>
+      <span class="ctrl-label">cue freq</span>
+      <input type="range" id="r4freq" min="1" max="8" value="3" step="0.5">
+      <span class="ctrl-label">decay</span>
+      <input type="range" id="r4decay" min="10" max="100" value="40">
+      <span class="status" id="s4">click to place memory</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- EXPERIMENT 5: COLLECTIVE ADMISSIBILITY -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<section class="exp" id="exp5">
+  <div class="exp-header">
+    <span class="exp-num">EXP / 05</span>
+    <h2>Collective Admissibility</h2>
+  </div>
+  <p class="exp-desc">
+    Each agent has an admissible future cone A(i) — the set of accessible
+    states from their current position. Collective admissibility is the
+    colimit colim A(i), assembling compatible futures along their overlaps.<br><br>
+    <em>Drag agents</em> (colored dots). The intersection region A_collective
+    is shown in amber; when agents are separated beyond a threshold, the
+    intersection collapses and collective agency fails (the region turns red).
+    <em>Add Agent</em> introduces a new participant.
+  </p>
+  <div class="canvas-wrap">
+    <canvas id="c5" width="820" height="380"></canvas>
+    <div class="controls">
+      <button onclick="c5AddAgent()">Add Agent</button>
+      <button onclick="c5RemoveAgent()">Remove Agent</button>
+      <button onclick="c5Reset()">Reset</button>
+      <span class="ctrl-label">cone angle</span>
+      <input type="range" id="r5angle" min="15" max="90" value="45">
+      <span class="status" id="s5">drag agents to reposition</span>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<footer>
+  HYDRA — Hybrid Dynamic Reasoning Architecture &nbsp;·&nbsp;
+  Flyxion / Admissibility Program &nbsp;·&nbsp;
+  These visualizations illustrate the RSVP–HYDRA theoretical framework.
+  All field dynamics are approximations for interactive demonstration.
+</footer>
+
+<script>
+// ═══════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════
+const GLOW  = '#39FF14';
+const AMBER = '#E8A020';
+const SLATE = '#4A6B8A';
+const DIM   = '#1A2E45';
+const RED   = '#FF4444';
+const PANEL = '#0D1B2A';
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function dist2(a, b) { return (a.x-b.x)**2 + (a.y-b.y)**2; }
+function dist(a, b) { return Math.sqrt(dist2(a, b)); }
+
+function glow(ctx, color, blur) {
+  ctx.shadowColor = color;
+  ctx.shadowBlur = blur ?? 12;
+}
+function noGlow(ctx) { ctx.shadowBlur = 0; }
+
+function setupHiDPI(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.width, h = canvas.height;
+  canvas.width  = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width  = w + 'px';
+  canvas.style.height = h + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  canvas._w = w; canvas._h = h;
+  return ctx;
+}
+
+function getPos(canvas, e) {
+  const r = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const scaleX = (canvas.width / dpr) / r.width;
+  const scaleY = (canvas.height / dpr) / r.height;
+  const src = e.touches ? e.touches[0] : e;
+  return { x: (src.clientX - r.left) * scaleX, y: (src.clientY - r.top) * scaleY };
+}
+
+// ═══════════════════════════════════════════════════
+// EXP 1: PROJECTION COLLAPSE
+// ═══════════════════════════════════════════════════
+(function() {
+  const cv = document.getElementById('c1');
+  const ctx = setupHiDPI(cv);
+  const W = cv._w, H = cv._h;
+  const MIDX = W / 2;
+
+  const colors = [GLOW,'#00BFFF','#FF6B9D','#FFD700','#B266FF','#FF8C42'];
+
+  let points = [];
+  let showFibers = false;
+  let collapsed = false;
+  let dragging = null;
+
+  function initPoints() {
+    points = [
+      {x: 120, y: 80,  attr: 0.85, id:0},
+      {x: 180, y: 200, attr: 0.6,  id:1},
+      {x: 90,  y: 260, attr: 0.75, id:2},
+      {x: 220, y: 310, attr: 0.4,  id:3},
+      {x: 140, y: 160, attr: 0.55, id:4},
+    ];
+  }
+  initPoints();
+
+  function projX(p) { return MIDX + 60 + (p.attr * (W - MIDX - 120)); }
+
+  function draw() {
+    ctx.clearRect(0,0,W,H);
+
+    // panels
+    ctx.fillStyle = PANEL;
+    ctx.fillRect(0,0,MIDX-10,H);
+    ctx.fillRect(MIDX+10,0,W-MIDX-10,H);
+
+    // labels
+    ctx.fillStyle = SLATE;
+    ctx.font = '10px Space Mono';
+    ctx.fillText('TRAJECTORY SPACE  𝒳', 12, 20);
+    ctx.fillText('ACHIEVEMENT MANIFOLD  𝓜', MIDX+16, 20);
+
+    // divider
+    ctx.strokeStyle = DIM;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.moveTo(MIDX, 0); ctx.lineTo(MIDX, H); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // achievement axis
+    ctx.strokeStyle = '#1A3050';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(MIDX+30, H/2); ctx.lineTo(W-20, H/2);
+    ctx.stroke();
+    ctx.fillStyle = SLATE;
+    ctx.font = '9px Space Mono';
+    ctx.fillText('low', MIDX+30, H/2+18);
+    ctx.fillText('high achievement', W-110, H/2+18);
+
+    // projection lines + fibers
+    for (let i = 0; i < points.length; i++) {
+      const p = points[i];
+      const col = colors[i % colors.length];
+      const px = projX(p);
+      const py = H / 2;
+
+      if (showFibers && !collapsed) {
+        // find other points with similar attr (within threshold)
+        for (let j = i+1; j < points.length; j++) {
+          const q = points[j];
+          if (Math.abs(p.attr - q.attr) < 0.1) {
+            ctx.strokeStyle = 'rgba(232,160,32,.25)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([2,4]);
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
+        }
+      }
+
+      // projection arrow
+      ctx.strokeStyle = collapsed ? SLATE : col;
+      ctx.globalAlpha = collapsed ? 0.3 : 0.55;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3,4]);
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y); ctx.lineTo(px, py);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+
+      // original point
+      if (!collapsed) {
+        glow(ctx, col, 10);
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 6, 0, Math.PI*2);
+        ctx.fill();
+        noGlow(ctx);
+        // hidden attr label
+        ctx.fillStyle = col;
+        ctx.font = '9px Space Mono';
+        ctx.fillText('h='+(p.attr.toFixed(2)), p.x+9, p.y-8);
+      }
+
+      // projected point on manifold
+      glow(ctx, collapsed ? RED : col, collapsed ? 14 : 8);
+      ctx.fillStyle = collapsed ? RED : col;
+      ctx.beginPath();
+      ctx.arc(px, py, collapsed ? 7 : 5, 0, Math.PI*2);
+      ctx.fill();
+      noGlow(ctx);
+    }
+
+    // collapse annotation
+    if (collapsed) {
+      ctx.fillStyle = RED;
+      ctx.font = '10px Space Mono';
+      ctx.fillText('fiber collapsed — context erased', MIDX+16, H-18);
+    } else if (showFibers) {
+      ctx.fillStyle = AMBER;
+      ctx.font = '10px Space Mono';
+      ctx.fillText('fibers visible — distinct trajectories, same outcome', MIDX+16, H-18);
+    }
+  }
+
+  // drag
+  cv.addEventListener('mousedown', e => {
+    const pos = getPos(cv, e);
+    if (pos.x > MIDX) return;
+    for (let p of points) {
+      if (Math.hypot(p.x - pos.x, p.y - pos.y) < 14) { dragging = p; break; }
+    }
+  });
+  cv.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const pos = getPos(cv, e);
+    dragging.x = clamp(pos.x, 10, MIDX-10);
+    dragging.y = clamp(pos.y, 10, H-10);
+    dragging.attr = clamp((dragging.x - 10) / (MIDX - 20), 0.05, 0.99);
+    draw();
+  });
+  cv.addEventListener('mouseup', () => { dragging = null; });
+
+  window.c1AddPoint = function() {
+    if (points.length >= 8) return;
+    points.push({
+      x: 60 + Math.random()*(MIDX-80),
+      y: 40 + Math.random()*(H-80),
+      attr: 0.1 + Math.random()*0.85,
+      id: points.length
+    });
+    draw();
+  };
+  window.c1ToggleFibers = function() {
+    showFibers = !showFibers;
+    document.getElementById('b1fiber').classList.toggle('active', showFibers);
+    draw();
+  };
+  window.c1ToggleCollapse = function() {
+    collapsed = !collapsed;
+    document.getElementById('b1collapse').classList.toggle('active', collapsed);
+    draw();
+  };
+  window.c1Reset = function() { initPoints(); showFibers=false; collapsed=false;
+    document.getElementById('b1fiber').classList.remove('active');
+    document.getElementById('b1collapse').classList.remove('active');
+    draw(); };
+  draw();
+})();
+
+// ═══════════════════════════════════════════════════
+// EXP 2: ADMISSIBILITY FIELD
+// ═══════════════════════════════════════════════════
+(function() {
+  const cv = document.getElementById('c2');
+  const ctx = setupHiDPI(cv);
+  const W = cv._w, H = cv._h;
+
+  let basins = [
+    {x: 200, y: 160, r: 90, strength: 1.0},
+    {x: 580, y: 240, r: 75, strength: 0.8},
+    {x: 380, y: 310, r: 60, strength: 0.65},
+  ];
+
+  let particles = [];
+  let fieldCache = null;
+  let frame = 0;
+  let animId = null;
+
+  function phi(x, y) {
+    let v = 0;
+    for (const b of basins) {
+      const d = Math.sqrt((x-b.x)**2 + (y-b.y)**2);
+      v += b.strength * Math.exp(-d*d / (2*b.r*b.r));
+    }
+    return v;
+  }
+
+  function gradPhi(x, y) {
+    const h = 2;
+    return {
+      dx: (phi(x+h,y) - phi(x-h,y)) / (2*h),
+      dy: (phi(x,y+h) - phi(x,y-h)) / (2*h),
+    };
+  }
+
+  function buildField() {
+    const res = 12;
+    fieldCache = [];
+    for (let x = res/2; x < W; x += res) {
+      for (let y = res/2; y < H; y += res) {
+        const v = phi(x, y);
+        fieldCache.push({x, y, v});
+      }
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = PANEL;
+    ctx.fillRect(0,0,W,H);
+
+    // field heatmap
+    if (!fieldCache) buildField();
+    const res = 12;
+    for (const f of fieldCache) {
+      const t = clamp(f.v, 0, 1);
+      const r = Math.round(lerp(13, 20, t));
+      const g = Math.round(lerp(27, 80, t*t));
+      const b = Math.round(lerp(42, 30, t));
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillRect(f.x - res/2, f.y - res/2, res, res);
+    }
+
+    // field flow arrows
+    const arrowRes = 40;
+    for (let x = arrowRes/2; x < W; x += arrowRes) {
+      for (let y = arrowRes/2; y < H; y += arrowRes) {
+        const g = gradPhi(x, y);
+        const mag = Math.sqrt(g.dx**2 + g.dy**2);
+        if (mag < 0.001) continue;
+        const scale = Math.min(14, mag * 30);
+        const nx = g.dx / mag, ny = g.dy / mag;
+        ctx.strokeStyle = `rgba(57,255,20,${clamp(mag*12, 0.05, 0.3)})`;
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(x - nx*scale*0.4, y - ny*scale*0.4);
+        ctx.lineTo(x + nx*scale*0.6, y + ny*scale*0.6);
+        ctx.stroke();
+      }
+    }
+
+    // basins
+    for (const b of basins) {
+      const grad = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r*1.4);
+      grad.addColorStop(0,   `rgba(57,255,20,${b.strength*0.22})`);
+      grad.addColorStop(0.5, `rgba(57,255,20,${b.strength*0.06})`);
+      grad.addColorStop(1,   'rgba(57,255,20,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r*1.4, 0, Math.PI*2);
+      ctx.fill();
+
+      glow(ctx, GLOW, 18);
+      ctx.fillStyle = GLOW;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, 4, 0, Math.PI*2);
+      ctx.fill();
+      noGlow(ctx);
+
+      ctx.fillStyle = SLATE;
+      ctx.font = '9px Space Mono';
+      ctx.fillText(`Φ=${b.strength.toFixed(1)}`, b.x+7, b.y-7);
+    }
+
+    // particles
+    const entropy = parseInt(document.getElementById('r2entropy').value);
+    for (const p of particles) {
+      const g = gradPhi(p.x, p.y);
+      const mag = Math.sqrt(g.dx**2 + g.dy**2);
+      const speed = 1.2 + mag * 6;
+      p.x += g.dx * speed + (Math.random()-0.5) * entropy * 0.04;
+      p.y += g.dy * speed + (Math.random()-0.5) * entropy * 0.04;
+      p.x = clamp(p.x, 2, W-2);
+      p.y = clamp(p.y, 2, H-2);
+      p.trail.push({x: p.x, y: p.y});
+      if (p.trail.length > 40) p.trail.shift();
+      p.age++;
+
+      // trail
+      for (let i = 1; i < p.trail.length; i++) {
+        const t = i / p.trail.length;
+        ctx.strokeStyle = `rgba(57,255,20,${t*0.5})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(p.trail[i-1].x, p.trail[i-1].y);
+        ctx.lineTo(p.trail[i].x, p.trail[i].y);
+        ctx.stroke();
+      }
+
+      glow(ctx, GLOW, 8);
+      ctx.fillStyle = AMBER;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 4, 0, Math.PI*2);
+      ctx.fill();
+      noGlow(ctx);
+    }
+
+    // remove settled particles
+    for (let i = particles.length-1; i >= 0; i--) {
+      if (particles[i].age > 500) particles.splice(i,1);
+    }
+
+    frame++;
+    document.getElementById('s2').textContent =
+      `${particles.length} particles · entropy ξ=${entropy}`;
+    animId = requestAnimationFrame(draw);
+  }
+
+  cv.addEventListener('click', e => {
+    const pos = getPos(cv, e);
+    particles.push({x: pos.x, y: pos.y, trail: [], age: 0});
+  });
+
+  window.c2AddBasin = function() {
+    if (basins.length >= 6) return;
+    basins.push({
+      x: 80 + Math.random() * (W-160),
+      y: 60 + Math.random() * (H-120),
+      r: 50 + Math.random() * 50,
+      strength: 0.5 + Math.random() * 0.5
+    });
+    fieldCache = null;
+  };
+  window.c2ClearParticles = function() { particles = []; };
+  window.c2Reset = function() {
+    basins = [
+      {x: 200, y: 160, r: 90, strength: 1.0},
+      {x: 580, y: 240, r: 75, strength: 0.8},
+      {x: 380, y: 310, r: 60, strength: 0.65},
+    ];
+    particles = [];
+    fieldCache = null;
+  };
+
+  draw();
+})();
+
+// ═══════════════════════════════════════════════════
+// EXP 3: SEMANTIC STRATIFICATION
+// ═══════════════════════════════════════════════════
+(function() {
+  const cv = document.getElementById('c3');
+  const ctx = setupHiDPI(cv);
+  const W = cv._w, H = cv._h;
+
+  const strataCols = ['#0D2B1A','#0A1F30','#1A0D2B','#1F1A0A','#0D1A1F'];
+  const strataLabels = ['S_α (dim 1)','S_β (dim 2)','S_γ (dim 3)','S_δ (dim 2)','S_ε (dim 1)'];
+  let strata = [];
+  let traj = [];
+  let drawing = false;
+  let forceAdmissible = false;
+
+  function randomizeStrata() {
+    strata = [];
+    let y = 0;
+    const n = 4 + Math.floor(Math.random()*3);
+    for (let i = 0; i < n; i++) {
+      const h = (H / n) * (0.6 + Math.random()*0.8);
+      strata.push({y0: y, y1: Math.min(y+h, H), col: strataCols[i%strataCols.length], label: strataLabels[i%strataLabels.length]});
+      y += h;
+    }
+    strata[strata.length-1].y1 = H;
+  }
+  randomizeStrata();
+
+  function strataAt(y) {
+    for (let i = 0; i < strata.length; i++) {
+      if (y >= strata[i].y0 && y < strata[i].y1) return i;
+    }
+    return strata.length-1;
+  }
+
+  function admissibleY(y, prevY, si) {
+    // At boundary, deflect to be tangential (stay in stratum)
+    const s = strata[si];
+    if (prevY !== null) {
+      const inCurrent = y >= s.y0 && y < s.y1;
+      if (!inCurrent) {
+        // clamp to stratum boundary
+        return clamp(y, s.y0+1, s.y1-2);
+      }
+    }
+    return y;
+  }
+
+  function draw() {
+    ctx.clearRect(0,0,W,H);
+
+    // strata
+    for (const s of strata) {
+      ctx.fillStyle = s.col;
+      ctx.fillRect(0, s.y0, W, s.y1-s.y0);
+      ctx.strokeStyle = 'rgba(74,107,138,0.4)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, s.y1); ctx.lineTo(W, s.y1);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(74,107,138,0.5)';
+      ctx.font = '10px Space Mono';
+      ctx.fillText(s.label, 12, s.y0 + 18);
+    }
+
+    // tangent constraint visualization at boundaries
+    for (const s of strata) {
+      for (let x = 50; x < W; x += 80) {
+        const y = s.y1;
+        ctx.strokeStyle = 'rgba(57,255,20,0.1)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x-18, y); ctx.lineTo(x+18, y);
+        ctx.stroke();
+        // tiny arrows showing tangent direction
+        ctx.strokeStyle = 'rgba(57,255,20,0.15)';
+        ctx.beginPath();
+        ctx.moveTo(x+12, y-5); ctx.lineTo(x+18, y); ctx.lineTo(x+12, y+5);
+        ctx.stroke();
+      }
+    }
+
+    // trajectory
+    if (traj.length > 1) {
+      ctx.lineWidth = 2;
+      for (let i = 1; i < traj.length; i++) {
+        const a = traj[i-1], b = traj[i];
+        const si_a = strataAt(a.y), si_b = strataAt(b.y);
+        const crossing = si_a !== si_b;
+        const admissible = b.admissible;
+
+        if (crossing && !admissible) {
+          ctx.strokeStyle = RED;
+          glow(ctx, RED, 6);
+        } else {
+          ctx.strokeStyle = GLOW;
+          glow(ctx, GLOW, 5);
+        }
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+        noGlow(ctx);
+      }
+
+      // start/end markers
+      glow(ctx, GLOW, 10);
+      ctx.fillStyle = GLOW;
+      ctx.beginPath(); ctx.arc(traj[0].x, traj[0].y, 5, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = AMBER;
+      ctx.beginPath(); ctx.arc(traj[traj.length-1].x, traj[traj.length-1].y, 5, 0, Math.PI*2); ctx.fill();
+      noGlow(ctx);
+    }
+
+    const violations = traj.filter(p => !p.admissible).length;
+    document.getElementById('s3').textContent =
+      traj.length < 2 ? 'draw a trajectory across strata' :
+      forceAdmissible ? 'trajectory constrained — stratum boundaries respected' :
+      violations > 0 ? `${violations} admissibility violations (red segments)` : 'trajectory admissible';
+  }
+
+  cv.addEventListener('mousedown', e => {
+    const pos = getPos(cv, e);
+    drawing = true;
+    traj = [{x: pos.x, y: pos.y, admissible: true}];
+    draw();
+  });
+
+  cv.addEventListener('mousemove', e => {
+    if (!drawing) return;
+    const pos = getPos(cv, e);
+    const prev = traj[traj.length-1];
+    let ny = pos.y;
+    let admissible = true;
+    const si_prev = strataAt(prev.y);
+    const si_cur = strataAt(pos.y);
+
+    if (forceAdmissible && si_prev !== si_cur) {
+      // deflect to stay in current stratum
+      ny = admissibleY(pos.y, prev.y, si_prev);
+      admissible = true;
+    } else if (si_prev !== si_cur) {
+      admissible = false;
+    }
+
+    traj.push({x: pos.x, y: ny, admissible});
+    draw();
+  });
+
+  cv.addEventListener('mouseup', () => { drawing = false; });
+
+  window.c3ToggleAdmissible = function() {
+    forceAdmissible = !forceAdmissible;
+    document.getElementById('b3adm').classList.toggle('active', forceAdmissible);
+    traj = [];
+    draw();
+  };
+  window.c3Reset = function() { traj = []; draw(); };
+  window.c3Randomize = function() { randomizeStrata(); traj = []; draw(); };
+  draw();
+})();
+
+// ═══════════════════════════════════════════════════
+// EXP 4: RESONANCE MEMORY
+// ═══════════════════════════════════════════════════
+(function() {
+  const cv = document.getElementById('c4');
+  const ctx = setupHiDPI(cv);
+  const W = cv._w, H = cv._h;
+
+  let memories = [];
+  let probeWave = null;
+  let probePt = null;
+  let frame = 0;
+  let animId;
+
+  function freqColor(freq) {
+    const hue = (freq / 8) * 260;
+    return `hsl(${hue},90%,60%)`;
+  }
+
+  function addMemory(x, y) {
+    const freq = 1 + Math.random() * 7;
+    memories.push({x, y, freq, amp: 0.8 + Math.random()*0.2, phase: Math.random()*Math.PI*2, resonance: 0});
+  }
+
+  // seed some memories
+  for (let i = 0; i < 5; i++) {
+    addMemory(80 + Math.random()*(W-160), 60 + Math.random()*(H-120));
+  }
+
+  function draw() {
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = PANEL;
+    ctx.fillRect(0,0,W,H);
+
+    const decay = parseInt(document.getElementById('r4decay').value);
+    const cueFreq = parseFloat(document.getElementById('r4freq').value);
+
+    // probe wave propagation
+    if (probeWave) {
+      probeWave.r += 3.5;
+      probeWave.alpha = Math.max(0, 1 - probeWave.r / Math.max(W,H));
+      if (probeWave.alpha < 0.01) probeWave = null;
+    }
+
+    if (probeWave) {
+      // draw ripple rings
+      for (let ring = 0; ring < 3; ring++) {
+        const rr = probeWave.r - ring * 22;
+        if (rr < 0) continue;
+        const col = freqColor(probeWave.freq);
+        ctx.strokeStyle = col.replace('60%', `${Math.round(probeWave.alpha * 40 * (1-ring*0.3))}%`);
+        ctx.lineWidth = 1.5 - ring*0.4;
+        ctx.beginPath();
+        ctx.arc(probeWave.x, probeWave.y, rr, 0, Math.PI*2);
+        ctx.stroke();
+      }
+
+      // update resonance for each memory
+      for (const m of memories) {
+        const d = Math.sqrt((m.x-probeWave.x)**2 + (m.y-probeWave.y)**2);
+        const freqMatch = 1 - Math.min(1, Math.abs(m.freq - probeWave.freq) / 2);
+        const distFactor = Math.max(0, 1 - d / (Math.max(W,H)*0.7));
+        const inWave = Math.abs(d - probeWave.r) < 30;
+        if (inWave) {
+          m.resonance = Math.max(m.resonance, freqMatch * distFactor);
+        }
+        m.resonance *= 0.97;
+      }
+    } else {
+      for (const m of memories) m.resonance *= 0.97;
+    }
+
+    // memories
+    for (const m of memories) {
+      const col = freqColor(m.freq);
+      const t = frame * 0.04 + m.phase;
+
+      // wave packet visualization — concentric rings pulsing at freq
+      for (let ring = 1; ring <= 3; ring++) {
+        const rBase = 16 + ring * 8;
+        const pulse = Math.sin(t * m.freq * 0.8) * 0.5 + 0.5;
+        const r = rBase + pulse * 5;
+        const alpha = (0.15 - ring * 0.04) * m.amp * (1 + m.resonance * 3);
+        ctx.strokeStyle = col.replace('60%', '60%').replace(')', `,${clamp(alpha,0,1)})`).replace('hsl', 'hsla');
+        ctx.lineWidth = m.resonance > 0.3 ? 2 : 1;
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, r, 0, Math.PI*2);
+        ctx.stroke();
+      }
+
+      // core dot
+      const coreGlow = 8 + m.resonance * 24;
+      glow(ctx, col, coreGlow);
+      ctx.fillStyle = col;
+      ctx.globalAlpha = 0.5 + m.resonance * 0.5;
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, 5 + m.resonance * 6, 0, Math.PI*2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      noGlow(ctx);
+
+      // freq label
+      ctx.fillStyle = SLATE;
+      ctx.font = '9px Space Mono';
+      ctx.fillText(`ω=${m.freq.toFixed(1)}`, m.x+9, m.y-10);
+      if (m.resonance > 0.2) {
+        ctx.fillStyle = col;
+        ctx.fillText(`w=${m.resonance.toFixed(2)}`, m.x+9, m.y+2);
+      }
+    }
+
+    // probe source
+    if (probePt) {
+      glow(ctx, AMBER, 14);
+      ctx.fillStyle = AMBER;
+      ctx.beginPath();
+      ctx.arc(probePt.x, probePt.y, 6, 0, Math.PI*2);
+      ctx.fill();
+      noGlow(ctx);
+      ctx.fillStyle = AMBER;
+      ctx.font = '9px Space Mono';
+      ctx.fillText(`c* ω=${cueFreq.toFixed(1)}`, probePt.x+9, probePt.y-5);
+    }
+
+    frame++;
+    const firing = probeWave ? ' · probe active' : '';
+    document.getElementById('s4').textContent =
+      `${memories.length} memories${firing} · cue ω=${cueFreq.toFixed(1)}`;
+    animId = requestAnimationFrame(draw);
+  }
+
+  cv.addEventListener('click', e => {
+    const pos = getPos(cv, e);
+    addMemory(pos.x, pos.y);
+  });
+
+  window.c4FireProbe = function() {
+    const cueFreq = parseFloat(document.getElementById('r4freq').value);
+    // fire from last clicked or center
+    const x = probePt ? probePt.x : W/2;
+    const y = probePt ? probePt.y : H/2;
+    probeWave = {x, y, r: 0, alpha: 1, freq: cueFreq};
+  };
+  window.c4ClearMemories = function() { memories = []; };
+  window.c4Reset = function() {
+    memories = [];
+    probeWave = null;
+    probePt = null;
+    for (let i = 0; i < 5; i++) {
+      addMemory(80 + Math.random()*(W-160), 60 + Math.random()*(H-120));
+    }
+  };
+
+  cv.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    probePt = getPos(cv, e);
+  });
+
+  // right-click to set probe origin
+  cv.title = 'Left-click: place memory | Right-click: set probe origin';
+
+  draw();
+})();
+
+// ═══════════════════════════════════════════════════
+// EXP 5: COLLECTIVE ADMISSIBILITY
+// ═══════════════════════════════════════════════════
+(function() {
+  const cv = document.getElementById('c5');
+  const ctx = setupHiDPI(cv);
+  const W = cv._w, H = cv._h;
+
+  const agentColors = [GLOW,'#00BFFF','#FF6B9D','#FFD700','#B266FF','#FF8C42'];
+  let agents = [
+    {x: 260, y: 200, col: agentColors[0]},
+    {x: 520, y: 200, col: agentColors[1]},
+    {x: 390, y: 300, col: agentColors[2]},
+  ];
+  let dragging = null;
+  let frame = 0;
+  let animId;
+
+  function draw() {
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = PANEL;
+    ctx.fillRect(0,0,W,H);
+
+    const halfAngle = (parseInt(document.getElementById('r5angle').value) / 2) * Math.PI / 180;
+    const coneLen = 110;
+
+    // compute collective intersection region (approximated as convex intersection of cones in 2D)
+    // Use a rasterized approach: for each pixel in field, check if inside all cones
+    const res = 8;
+    const inAll = [];
+    for (let px = 0; px < W; px += res) {
+      for (let py = 0; py < H; py += res) {
+        let inside = true;
+        for (const a of agents) {
+          // cone opens upward (toward future — lower y = higher on screen)
+          const dx = px - a.x, dy = py - a.y;
+          // forward direction: upward (-y)
+          const dotFwd = -dy; // dot with (0,-1)
+          const distAlong = Math.sqrt(dx*dx+dy*dy);
+          if (distAlong > coneLen || distAlong < 5) { inside = false; break; }
+          const angle = Math.atan2(Math.abs(dx), Math.abs(-dy));
+          if (angle > halfAngle) { inside = false; break; }
+        }
+        if (inside) inAll.push({px, py});
+      }
+    }
+
+    // check if collective admissibility is non-empty
+    const hasIntersection = inAll.length > 0;
+
+    // draw individual cones
+    for (const a of agents) {
+      // cone fill
+      const grad = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, coneLen);
+      grad.addColorStop(0,   a.col.replace('#','rgba(').replace(/^rgba\(/,'rgba(') + '0)'); // hack: use fillStyle
+      ctx.fillStyle = a.col + '18';
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(a.x + Math.sin(-halfAngle)*coneLen, a.y - Math.cos(-halfAngle)*coneLen);
+      ctx.arc(a.x, a.y, coneLen, -Math.PI/2 - halfAngle, -Math.PI/2 + halfAngle);
+      ctx.lineTo(a.x, a.y);
+      ctx.fill();
+
+      // cone outline
+      ctx.strokeStyle = a.col + '60';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(a.x + Math.sin(-halfAngle)*coneLen, a.y - Math.cos(-halfAngle)*coneLen);
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(a.x + Math.sin(halfAngle)*coneLen, a.y - Math.cos(halfAngle)*coneLen);
+      ctx.stroke();
+    }
+
+    // draw collective intersection
+    const intersectCol = hasIntersection ? AMBER : RED;
+    for (const p of inAll) {
+      ctx.fillStyle = hasIntersection
+        ? 'rgba(232,160,32,0.35)'
+        : 'rgba(255,68,68,0.35)';
+      ctx.fillRect(p.px - res/2, p.py - res/2, res, res);
+    }
+
+    // intersection label
+    if (inAll.length > 0) {
+      // centroid
+      let cx = 0, cy = 0;
+      for (const p of inAll) { cx += p.px; cy += p.py; }
+      cx /= inAll.length; cy /= inAll.length;
+      ctx.fillStyle = AMBER;
+      ctx.font = 'italic 11px Space Mono';
+      ctx.fillText('A_collective', cx - 38, cy);
+    }
+
+    // agents
+    for (const a of agents) {
+      glow(ctx, a.col, 16);
+      ctx.fillStyle = a.col;
+      ctx.beginPath();
+      ctx.arc(a.x, a.y, 8, 0, Math.PI*2);
+      ctx.fill();
+      noGlow(ctx);
+    }
+
+    // status
+    const msg = hasIntersection
+      ? `A_collective ≠ ∅ — solidarity geometrically supported  (${inAll.length*res*res}px²)`
+      : `A_collective = ∅ — collective agency fails`;
+    document.getElementById('s5').textContent = msg;
+
+    const statusEl = document.getElementById('s5');
+    statusEl.style.color = hasIntersection ? GLOW : RED;
+
+    frame++;
+    animId = requestAnimationFrame(draw);
+  }
+
+  // drag
+  cv.addEventListener('mousedown', e => {
+    const pos = getPos(cv, e);
+    for (const a of agents) {
+      if (Math.hypot(a.x-pos.x, a.y-pos.y) < 16) { dragging = a; break; }
+    }
+  });
+  cv.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const pos = getPos(cv, e);
+    dragging.x = clamp(pos.x, 20, W-20);
+    dragging.y = clamp(pos.y, 20, H-20);
+  });
+  cv.addEventListener('mouseup', () => { dragging = null; });
+
+  window.c5AddAgent = function() {
+    if (agents.length >= 6) return;
+    agents.push({
+      x: 100 + Math.random()*(W-200),
+      y: 120 + Math.random()*(H-200),
+      col: agentColors[agents.length % agentColors.length]
+    });
+  };
+  window.c5RemoveAgent = function() {
+    if (agents.length > 2) agents.pop();
+  };
+  window.c5Reset = function() {
+    agents = [
+      {x: 260, y: 200, col: agentColors[0]},
+      {x: 520, y: 200, col: agentColors[1]},
+      {x: 390, y: 300, col: agentColors[2]},
+    ];
+  };
+
+  draw();
+})();
+</script>
 </body>
 </html>
